@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聽力測驗互動網頁</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 24px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 1000px;
+            padding: 30px;
+            text-align: center;
+            border: 4px solid #bae6fd;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        h1 {
+            color: #0369a1;
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        p.subtitle {
+            color: #64748b;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.4);
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed #e2e8f0;
+        }
+
+        .info-box {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #334155;
+            background-color: #f8fafc;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .score-highlight { color: #e11d48; font-size: 1.4rem; }
+        .progress-highlight { color: #0d9488; }
+
+        .audio-panel {
+            background-color: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-title {
+            font-size: 1.1rem;
+            color: #166534;
+            font-weight: bold;
+        }
+
+        .btn-audio {
+            background-color: #22c55e;
+            color: white;
+            border: none;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 15px rgba(34, 197, 94, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-audio:hover {
+            transform: scale(1.08);
+            background-color: #16a34a;
+        }
+
+        .btn-audio svg { width: 40px; height: 40px; fill: currentColor; }
+
+        .btn-replay {
+            background-color: #64748b;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-replay:hover { background-color: #475569; }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .image-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+        }
+
+        .image-card {
+            background-color: #fff;
+            border: 3px solid #cbd5e1;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        .image-card:hover {
+            transform: scale(1.04);
+            border-color: #38bdf8;
+            box-shadow: 0 6px 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .image-card img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .image-card.correct {
+            border-color: #22c55e !important;
+            background-color: #f0fdf4;
+            animation: pulse 0.5s ease;
+        }
+
+        .image-card.incorrect {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2;
+            animation: shake 0.4s ease;
+        }
+
+        .result-score {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #e11d48;
+            margin: 20px 0;
+            text-shadow: 2px 2px 0px #ffe4e6;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); border-width: 5px; }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="start-screen" class="screen active">
+            <h1>聽力大考驗</h1>
+            <p class="subtitle">請仔細聆聽音檔，並選出正確的圖示。<br>答錯的題目會排到最後面，直到完全答對為止喔！</p>
+            <button class="btn-primary" onclick="startGame()">開始測驗</button>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="info-box">已答對：<span id="progress" class="progress-highlight">0 / 10</span></div>
+                <div class="info-box">目前分數：<span id="score" class="score-highlight">100</span> 分</div>
+            </div>
+
+            <div class="audio-panel">
+                <div class="audio-title">點擊喇叭播放題目：</div>
+                <button class="btn-audio" onclick="playQuestionAudio()" title="播放題目音檔">
+                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+                <button class="btn-replay" onclick="playQuestionAudio()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    再次播放
+                </button>
+            </div>
+
+            <div class="image-grid" id="image-grid">
+                </div>
+        </div>
+
+        <div id="end-screen" class="screen">
+            <h1>測驗完成！</h1>
+            <p class="subtitle">你的最終得分為：</p>
+            <div class="result-score" id="final-score">100</div>
+            <button class="btn-primary" onclick="restartGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        // 設定為 10 題，讀取 p2_1~p2_10 與 s2_1~s2_10
+        const totalItems = 10;
+        let questions = [];
+        for (let i = 1; i <= totalItems; i++) {
+            questions.push({
+                id: i,
+                img: `p2_${i}.jpg`,
+                audio: `s2_${i}.mp3`
+            });
+        }
+
+        let questionQueue = []; 
+        let correctCount = 0;   
+        let currentScore = 100;
+        let currentAudio = null;
+        let isTransitioning = false; 
+
+        const audioCorrect = new Audio('正確.mp3');
+        const audioIncorrect = new Audio('錯誤.mp3');
+        const audioFinal = new Audio('ALL.mp3');
+
+        function initGrid() {
+            const grid = document.getElementById('image-grid');
+            grid.innerHTML = '';
+            
+            questions.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.dataset.id = item.id;
+                card.onclick = (e) => handleAnswerSelection(item.id, card);
+
+                const img = document.createElement('img');
+                img.src = item.img;
+                
+                card.appendChild(img);
+                grid.appendChild(card);
+            });
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            
+            currentScore = 100;
+            correctCount = 0;
+            document.getElementById('score').innerText = currentScore;
+            
+            questionQueue = [...questions].sort(() => Math.random() - 0.5);
+            
+            initGrid();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isTransitioning = false;
+            
+            if (questionQueue.length === 0) {
+                endGame();
+                return;
+            }
+
+            const cards = document.querySelectorAll('.image-card');
+            cards.forEach(card => card.classList.remove('correct', 'incorrect'));
+            
+            document.getElementById('progress').innerText = `${correctCount} / ${totalItems}`;
+            
+            setTimeout(() => {
+                playQuestionAudio();
+            }, 400);
+        }
+
+        function playQuestionAudio() {
+            if (isTransitioning && currentAudio) return;
+            
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            
+            const currentQ = questionQueue[0];
+            currentAudio = new Audio(currentQ.audio);
+            currentAudio.play().catch(e => console.log("等待點擊播放:", e));
+        }
+
+        function handleAnswerSelection(selectedId, cardElement) {
+            if (isTransitioning) return;
+            
+            const currentQ = questionQueue[0];
+
+            if (selectedId === currentQ.id) {
+                isTransitioning = true;
+                cardElement.classList.add('correct');
+                
+                if (currentAudio) currentAudio.pause();
+                audioCorrect.currentTime = 0;
+                audioCorrect.play();
+
+                questionQueue.shift();
+                correctCount++;
+
+                setTimeout(() => {
+                    loadQuestion();
+                }, 1500);
+
+            } else {
+                isTransitioning = true;
+                cardElement.classList.add('incorrect');
+                
+                if (currentAudio) currentAudio.pause();
+                audioIncorrect.currentTime = 0;
+                audioIncorrect.play();
+
+                currentScore = Math.max(0, currentScore - 5);
+                document.getElementById('score').innerText = currentScore;
+
+                // 答錯將題目移到最後面重測
+                const wrongQ = questionQueue.shift();
+                questionQueue.push(wrongQ);
+
+                setTimeout(() => {
+                    loadQuestion();
+                }, 1500);
+            }
+        }
+
+        function endGame() {
+            if (currentAudio) currentAudio.pause();
+            
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('end-screen').classList.add('active');
+            
+            document.getElementById('final-score').innerText = currentScore;
+            
+            audioFinal.currentTime = 0;
+            audioFinal.play();
+        }
+
+        function restartGame() {
+            document.getElementById('end-screen').classList.remove('active');
+            startGame();
+        }
+    </script>
+</body>
+</html>
