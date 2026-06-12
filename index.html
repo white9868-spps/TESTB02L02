@@ -109,6 +109,7 @@
             flex-direction: column;
             align-items: center;
             gap: 15px;
+            width: 100%;
         }
 
         .audio-title {
@@ -156,33 +157,46 @@
 
         .btn-replay:hover { background-color: #475569; }
 
+        /* --- 網格佈局最佳化：徹底解決平板圖片重疊 --- */
         .image-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(4, 1fr); /* 桌機、大平板固定為 4 欄 */
             gap: 20px;
             margin-top: 10px;
+            width: 100%;
         }
 
-        @media (max-width: 600px) {
+        /* 針對一般平板裝置調適 */
+        @media (max-width: 850px) {
             .image-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
+                grid-template-columns: repeat(3, 1fr); /* 平板寬度改為 3 欄 */
+                gap: 16px;
             }
         }
 
+        /* 針對一般手機裝置調適 */
+        @media (max-width: 550px) {
+            .image-grid {
+                grid-template-columns: repeat(2, 1fr); /* 手機寬度改為 2 欄 */
+                gap: 12px;
+            }
+        }
+
+        /* --- 圖卡容器與圖片設定修正 --- */
         .image-card {
             background-color: #fff;
             border: 3px solid #cbd5e1;
             border-radius: 16px;
-            overflow: hidden;
             cursor: pointer;
             transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-            aspect-ratio: 1 / 1;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1; /* 強制外框鎖定為正方形 */
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px;
-            position: relative;
+            padding: 12px;
+            overflow: hidden; /* 關鍵修復：超出範圍直接裁切，防範圖片溢出導致重疊 */
         }
 
         .image-card:hover {
@@ -192,10 +206,11 @@
         }
 
         .image-card img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 關鍵修復：不論圖片原創尺寸，一律等比例縮小裝入格內 */
             pointer-events: none;
+            display: block;
         }
 
         .image-card.correct {
@@ -270,7 +285,7 @@
     </div>
 
     <script>
-        // 設定為 10 題，讀取 p2_1~p2_10 與 s2_1~s2_10
+        // 配置調整：設定為 10 題，自動匹配 p2_1~p2_10.jpg 與 s2_1~s2_10.mp3
         const totalItems = 10;
         let questions = [];
         for (let i = 1; i <= totalItems; i++) {
@@ -287,10 +302,12 @@
         let currentAudio = null;
         let isTransitioning = false; 
 
+        // 預載固定音效
         const audioCorrect = new Audio('正確.mp3');
         const audioIncorrect = new Audio('錯誤.mp3');
         const audioFinal = new Audio('ALL.mp3');
 
+        // 初始化底下的選項卡片
         function initGrid() {
             const grid = document.getElementById('image-grid');
             grid.innerHTML = '';
@@ -303,6 +320,7 @@
 
                 const img = document.createElement('img');
                 img.src = item.img;
+                img.alt = `選項 ${item.id}`;
                 
                 card.appendChild(img);
                 grid.appendChild(card);
@@ -317,6 +335,7 @@
             correctCount = 0;
             document.getElementById('score').innerText = currentScore;
             
+            // 打亂出題佇列
             questionQueue = [...questions].sort(() => Math.random() - 0.5);
             
             initGrid();
@@ -351,7 +370,7 @@
             
             const currentQ = questionQueue[0];
             currentAudio = new Audio(currentQ.audio);
-            currentAudio.play().catch(e => console.log("等待點擊播放:", e));
+            currentAudio.play().catch(e => console.log("瀏覽器攔截自動播放:", e));
         }
 
         function handleAnswerSelection(selectedId, cardElement) {
@@ -360,6 +379,7 @@
             const currentQ = questionQueue[0];
 
             if (selectedId === currentQ.id) {
+                // 答對處理
                 isTransitioning = true;
                 cardElement.classList.add('correct');
                 
@@ -375,6 +395,7 @@
                 }, 1500);
 
             } else {
+                // 答錯處理
                 isTransitioning = true;
                 cardElement.classList.add('incorrect');
                 
@@ -385,7 +406,7 @@
                 currentScore = Math.max(0, currentScore - 5);
                 document.getElementById('score').innerText = currentScore;
 
-                // 答錯將題目移到最後面重測
+                // 答錯將當前題目移到佇列最尾端重考
                 const wrongQ = questionQueue.shift();
                 questionQueue.push(wrongQ);
 
